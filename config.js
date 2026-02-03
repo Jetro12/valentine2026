@@ -60,7 +60,7 @@ const CONFIG = {
     buttonBackground: "#4a69ff",  // Romantic royal blue
     buttonHover: "#6b83ff",       // Softer hover blue
     textColor: "#1e3799"          // Deep navy blue
-}
+},
 
     // Animation settings
     // Adjust these if you want faster/slower animations
