@@ -216,27 +216,65 @@ function setupMusicPlayer() {
     // Set music source and volume
     musicSource.src = config.music.musicUrl;
     bgMusic.volume = config.music.volume || 0.5;
+    bgMusic.loop = true;
     bgMusic.load();
 
-    // Try autoplay if enabled
-    if (config.music.autoplay) {
-        const playPromise = bgMusic.play();
-        if (playPromise !== undefined) {
-            playPromise.catch(error => {
-                console.log("Autoplay prevented by browser");
-                musicToggle.textContent = config.music.startText;
-            });
-        }
-    }
+     const setButton = (isPlaying) => {
+        musicToggle.textContent = isPlaying ? config.music.stopText : config.music.startText;
+    };
 
-    // Toggle music on button click
-    musicToggle.addEventListener('click', () => {
+    // Helper: safe play (only sets UI if play really works)
+    const safePlay = async () => {
+        try {
+            await bgMusic.play();
+            setButton(true);
+            return true;
+        } catch (err) {
+            setButton(false);
+            return false;
+        }
+    };
+
+    const pauseMusic = () => {
+        bgMusic.pause();
+        setButton(false);
+    };
+
+    
+   musicToggle.addEventListener('click', async () => {
         if (bgMusic.paused) {
-            bgMusic.play();
-            musicToggle.textContent = config.music.stopText;
+            bgMusic.muted = false;        // user gesture -> allow sound
+            await safePlay();
         } else {
-            bgMusic.pause();
-            musicToggle.textContent = config.music.startText;
+            pauseMusic();
         }
     });
+
+    // ✅ Autoplay behavior
+    if (config.music.autoplay) {
+        // Start muted so browsers allow autoplay more often
+        bgMusic.muted = true;
+
+        // Try to start immediately (muted)
+        safePlay();
+
+        // First user interaction anywhere: unmute (sound comes in)
+        const enableSoundOnce = async () => {
+            bgMusic.muted = false;
+
+            // If autoplay was blocked and it's still paused, try again
+            if (bgMusic.paused) {
+                await safePlay();
+            } else {
+                // It was already playing muted; now it becomes audible
+                setButton(true);
+            }
+        };
+
+        document.addEventListener('click', enableSoundOnce, { once: true });
+        document.addEventListener('touchstart', enableSoundOnce, { once: true });
+        document.addEventListener('keydown', enableSoundOnce, { once: true });
+    } else {
+        setButton(false);
+    }
 } 
